@@ -476,37 +476,36 @@ require(dirname(__FILE__) . '/../../../../wp-load.php');
             if (is_dir($repStockage) == FALSE){mkdir($repStockage,0777,true);}
             $pdf->Output('F',$repStockage . $attchmentName);
             $subject = "Quittance de loyer $appartement->adresse " . substr($loyer->period_from,0,4) . "-" . substr($loyer->period_from,5,2);
-            $passage_ligne = "\r\n";
-            $corps_message = "Bonjour,".$passage_ligne."Ci-joint votre quittance de loyer pour la période : ".moisAnneeFr($loyer->period_from) . "." . $passage_ligne."Cordialement,".$passage_ligne.$proprio->signature_email;
+            $corps_message = "Bonjour,\nCi-joint votre quittance de loyer pour la période : " . moisAnneeFr($loyer->period_from) . ".\nCordialement,\n" . $proprio->signature_email;
 
-            $boundary = md5(rand()); // clé aléatoire de limite
-            $passage_ligne = "\r\n";
-            $type_fichier = "application/pdf";
-            $handle = fopen($repStockage . $attchmentName, 'r'); //Ouverture du fichier
-            $content = fread($handle, filesize($repStockage . $attchmentName)); //Lecture du fichier
-            $encoded_content = chunk_split(base64_encode($content)); //Encodage
-            $f = fclose($handle); //Fermeture du fichier
+            $headers = array(
+                "From: " . $proprio->email_nom . " <" . $proprio->email . ">",
+                "Cc: " . $proprio->email,
+                "Reply-To: " . $proprio->email_nom . " <" . $proprio->email . ">",
+            );
 
-            
-            $message = '--' . $boundary . $passage_ligne; //Séparateur d'ouverture
-            $message .= "Content-Type: text/plain; charset=utf-8" . $passage_ligne; //Type du contenu
-            $message .= "Content-Transfer-Encoding: 8bit" . $passage_ligne; //Encodage
-            $message .= $passage_ligne . $corps_message . $passage_ligne; //Contenu du message
-             
-            $message .= $passage_ligne . "--" . $boundary . $passage_ligne; //Deuxième séparateur d'ouverture
-            $message .= 'Content-type:'.$type_fichier.';name="'.$attchmentName.'"'. $passage_ligne; //Type de contenu (application/pdf ou image/jpeg)
-            $message .='Content-Disposition: attachment; filename="'.$attchmentName.'"'. $passage_ligne; //Précision de pièce jointe
-            $message .= 'Content-transfer-encoding:base64'. $passage_ligne; //Encodage
-            $message .= $passage_ligne; //Ligne blanche. IMPORTANT !
-            $message .= $encoded_content. $passage_ligne; //Pièce jointe
+            if(empty($locataire->email)){
+                wp_die("<p>Le locataire n'a pas d'adresse e-mail renseignée.</p>", "Échec de l'envoi");
+            }
 
-            $headers = "From: ". $proprio->email_nom . " <" . $proprio->email . ">" . $passage_ligne; //Emetteur
-            $headers .= "Cc: $proprio->email" . $passage_ligne;
-            $headers.= "Reply-to: ". $proprio->email_nom . " <" . $proprio->email . ">" . $passage_ligne; //Emetteur
-            $headers.= "MIME-Version: 1.0" . $passage_ligne; //Version de MIME
-            $headers.= 'Content-Type: multipart/mixed; boundary='.$boundary .' '. $passage_ligne; 
+            // Récupère le détail de l'erreur si l'envoi échoue
+            $erreur_mail = null;
+            add_action('wp_mail_failed', function($wp_error) use (&$erreur_mail){
+                $erreur_mail = $wp_error->get_error_message();
+            });
 
-            mail($locataire->email, $subject, $message, $headers);
+            $resultat_mail = wp_mail($locataire->email, $subject, $corps_message, $headers, array($repStockage . $attchmentName));
+            if(!$resultat_mail){
+                $detail = $erreur_mail ? $erreur_mail : "aucun détail fourni";
+                error_log("Quittances : échec de l'envoi à " . $locataire->email . " : " . $detail);
+                wp_die(
+                    "<p>L'envoi de la quittance a échoué.</p>"
+                    . "<p>Destinataire : " . esc_html($locataire->email) . "</p>"
+                    . "<p>Expéditeur : " . esc_html($proprio->email) . "</p>"
+                    . "<p>Détail : " . esc_html($detail) . "</p>",
+                    "Échec de l'envoi"
+                );
+            }
             $urlRedirection = get_home_url() . "/";
             Header("Location: $urlRedirection");
             break;
