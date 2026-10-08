@@ -22,7 +22,7 @@ if(is_user_logged_in()){
    $script_upd_locataire = plugins_url($pluginName) . "/scripts/update_locataire.php";
 
    $user = wp_get_current_user();
-   $sql = "SELECT t1.*, t2.loyer, t2.charges FROM " . $wpdb->prefix . "qtnc_locataires as t1 left join " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id WHERE t2.id_proprio = " . $user->id;
+   $sql = "SELECT t1.*, t2.loyer, t2.charges FROM " . $wpdb->prefix . "qtnc_locataires as t1 left join " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id WHERE t2.id_proprio = " . $user->id . " ORDER BY t1.date_from DESC";
 
   $locataires = $wpdb->get_results($sql);
   $proprio = $wpdb->get_row("SELECT * FROM " . $wpdb->prefix . "qtnc_proprietaires WHERE user_id = $user->id");  
@@ -339,6 +339,13 @@ if(count($locataires) > 0){
 
         $loyersPayes = $wpdb->get_results("select * from " . $wpdb->prefix . "qtnc_loyers where id_locataire = " . $locataire->id . " order by period_from desc");
 
+        $html .= "<details class=\"mt-2\">";
+        $html .= "<summary class=\"clicable\" style=\"font-size:14px;\">Quittances (" . count($loyersPayes) . ")";
+        if(count($loyersPayes) > 0){
+            $html .= " - dernière : " . qtnc_mois_annee_fr($loyersPayes[0]->period_from);
+        }
+        $html .= "</summary>";
+
         if(count($loyersPayes)>0){
         foreach($loyersPayes as $loyer){
             $url = "/wp-content/plugins/quittances/scripts/quitpdf.php?locataire=$locataire->uuid&loyer=$loyer->uuid";
@@ -414,6 +421,7 @@ if(count($locataires) > 0){
                 $html .= "</div>";
             $html .= "</div>";
         }
+        $html .= "</details>";
     }}else{
         $html .= "<div class=\"row mb10\">";
             $html .= "<div class=\"col-12\">";
