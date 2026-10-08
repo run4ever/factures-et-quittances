@@ -19,6 +19,7 @@ if(is_user_logged_in()){
 
    $script_upd_loyer = plugins_url($pluginName) . "/scripts/update_loyer.php";
    $script_upd_proprio = plugins_url($pluginName) . "/scripts/update_proprio.php";
+   $script_upd_locataire = plugins_url($pluginName) . "/scripts/update_locataire.php";
 
    $user = wp_get_current_user();
    $sql = "SELECT t1.*, t2.loyer, t2.charges FROM " . $wpdb->prefix . "qtnc_locataires as t1 left join " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id WHERE t1.date_to is NULL AND t2.id_proprio = " . $user->id;
@@ -32,6 +33,9 @@ if(is_user_logged_in()){
 
     if(isset($_GET['envoi']) && $_GET['envoi'] == 'ok'){
         $html .= "<div class=\"col-12 col-md-8 alert alert-success\" role=\"alert\">La quittance a bien été envoyée au locataire.</div>";
+    }
+    if(isset($_GET['lien']) && $_GET['lien'] == 'nouveau'){
+        $html .= "<div class=\"col-12 col-md-8 alert alert-success\" role=\"alert\">Nouveau lien créé : l'ancien lien de l'espace locataire ne fonctionne plus. Le nouveau sera envoyé avec la prochaine quittance.</div>";
     }
     if(isset($_GET['envoi']) && $_GET['envoi'] == 'deja'){
         $html .= "<div class=\"col-12 col-md-8 alert alert-warning\" role=\"alert\">Ce loyer avait déjà été enregistré, rien n'a été ajouté ni envoyé.</div>";
@@ -306,6 +310,18 @@ if(count($locataires) > 0){
                 $html .= "<button type=\"submit\" class=\"btn btn-sm btn-success\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i> Loyer reçu : $mois ($montant €)</button>";
             }
         $html .= "</form>";
+
+        // Espace locataire : lien secret et renouvellement du lien
+        $url_espace = qtnc_url_espace_locataire(qtnc_token_locataire($locataire->id));
+        $html .= "<span style=\"margin-left:15px; font-size:14px;\">";
+            $html .= "<a href=\"" . esc_url($url_espace) . "\" target=\"_blank\" rel=\"noopener\" title=\"Le lien envoyé au locataire en bas de chaque quittance\"><i class=\"fa fa-user\" aria-hidden=\"true\"></i> Espace locataire</a>";
+            $html .= "<form method=POST action=$script_upd_locataire accept-charset=\"UTF-8\" style=\"display:inline; margin-left:10px;\" onsubmit=\"return confirm('" . esc_js("Créer un nouveau lien pour $locataire->locataire ? L'ancien lien ne fonctionnera plus.") . "');\">";
+                $html .= "<input type=\"hidden\" name=\"action\" value=\"3\">";
+                $html .= "<input type=\"hidden\" name=\"uuid\" value=\"$locataire->uuid\">";
+                $html .= "<input type=\"hidden\" name=\"id\" value=\"$locataire->id\">";
+                $html .= "<button type=\"submit\" class=\"btn btn-link btn-sm p-0\" style=\"font-size:14px;\" title=\"Coupe l'accès par l'ancien lien\"><i class=\"fa fa-refresh\" aria-hidden=\"true\"></i> Nouveau lien</button>";
+            $html .= "</form>";
+        $html .= "</span>";
 
         $loyersPayes = $wpdb->get_results("select * from " . $wpdb->prefix . "qtnc_loyers where id_locataire = " . $locataire->id . " order by period_from desc");
 

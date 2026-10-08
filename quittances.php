@@ -20,14 +20,23 @@ include_once ("tools/myfunctions.php");
 //----------------------------------------------------------
 function qtnc_maj_base(){
     global $wpdb;
-    if(get_option('qtnc_db_version') >= 1){return;}
+    $version = intval(get_option('qtnc_db_version'));
 
-    $table = $wpdb->prefix . "qtnc_entreprises";
-    $colonnes = $wpdb->get_col("SHOW COLUMNS FROM $table");
-    if(!in_array('adeli', $colonnes)){$wpdb->query("ALTER TABLE $table ADD COLUMN adeli VARCHAR(30) NULL");}
-    if(!in_array('siret', $colonnes)){$wpdb->query("ALTER TABLE $table ADD COLUMN siret VARCHAR(30) NULL");}
+    if($version < 1){
+        $table = $wpdb->prefix . "qtnc_entreprises";
+        $colonnes = $wpdb->get_col("SHOW COLUMNS FROM $table");
+        if(!in_array('adeli', $colonnes)){$wpdb->query("ALTER TABLE $table ADD COLUMN adeli VARCHAR(30) NULL");}
+        if(!in_array('siret', $colonnes)){$wpdb->query("ALTER TABLE $table ADD COLUMN siret VARCHAR(30) NULL");}
+        update_option('qtnc_db_version', 1);
+    }
 
-    update_option('qtnc_db_version', 1);
+    // Lien secret d'accès du locataire à ses quittances
+    if($version < 2){
+        $table = $wpdb->prefix . "qtnc_locataires";
+        $colonnes = $wpdb->get_col("SHOW COLUMNS FROM $table");
+        if(!in_array('token_acces', $colonnes)){$wpdb->query("ALTER TABLE $table ADD COLUMN token_acces VARCHAR(64) NULL, ADD UNIQUE KEY token_acces (token_acces)");}
+        update_option('qtnc_db_version', 2);
+    }
 }
 qtnc_maj_base();
 

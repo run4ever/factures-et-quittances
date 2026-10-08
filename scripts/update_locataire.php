@@ -130,12 +130,20 @@ if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']
                     '%d',
                 )
             );
-            
+
+            break;
+
+        case '3':
+            // Nouveau lien d'accès à l'espace locataire : l'ancien lien ne fonctionne plus
+            qtnc_token_locataire($_POST['id'], true);
+            $urlRedirection = get_home_url() . "/quittances?lien=nouveau";
             break;
     }
 
     $wpdb->close();
-    $urlRedirection = get_home_url() . "/locataires";
+    if(!isset($urlRedirection)){
+        $urlRedirection = get_home_url() . "/locataires";
+    }
     Header("Location: $urlRedirection");
 }
 

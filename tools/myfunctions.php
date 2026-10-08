@@ -32,6 +32,27 @@ function qtnc_prochaine_periode($id_locataire){
     return array('from' => $debut, 'to' => $fin);
 }
 
+//----------------------------------------------------------
+// Espace locataire (accès par lien secret)
+//----------------------------------------------------------
+// Renvoie le jeton d'accès du locataire, en le créant s'il n'existe pas encore
+// ($nouveau = true remplace l'ancien jeton, ce qui coupe l'accès par l'ancien lien)
+function qtnc_token_locataire($id_locataire, $nouveau = false){
+    global $wpdb;
+    $table = $wpdb->prefix . "qtnc_locataires";
+    if(!$nouveau){
+        $token = $wpdb->get_var($wpdb->prepare("SELECT token_acces FROM $table WHERE id = %d", $id_locataire));
+        if($token){return $token;}
+    }
+    $token = bin2hex(random_bytes(32));
+    $wpdb->update($table, array('token_acces' => $token), array('id' => $id_locataire), array('%s'), array('%d'));
+    return $token;
+}
+
+function qtnc_url_espace_locataire($token){
+    return plugins_url('quittances') . "/scripts/mes_quittances.php?acces=" . $token;
+}
+
 /* Disable WordPress Admin Bar for all users except administrators */
 add_filter( 'show_admin_bar', 'restrict_admin_bar' );
 function restrict_admin_bar( $show ) {

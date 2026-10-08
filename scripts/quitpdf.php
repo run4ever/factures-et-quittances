@@ -323,20 +323,30 @@ require(dirname(__FILE__) . '/../../../../wp-load.php');
     if(isset($_GET['way'])){
         $way = $_GET['way'];
     }
-    // Seul le propriétaire connecté du logement peut consulter ou envoyer la quittance
-    if(!is_user_logged_in()){
-        $wpdb->close();
-        Header("Location: " . wp_login_url((is_ssl() ? "https://" : "http://") . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"]));
-        exit;
-    }
-    $loyer_owner = $wpdb->get_var($wpdb->prepare(
-        "SELECT t3.id_proprio FROM " . $wpdb->prefix . "qtnc_loyers as t1 LEFT JOIN " . $wpdb->prefix . "qtnc_locataires as t2 on t1.id_locataire = t2.id LEFT JOIN " . $wpdb->prefix . "qtnc_appartements as t3 on t2.id_appartement = t3.id WHERE t1.uuid = %s",
+    $acces_loyer = $wpdb->get_row($wpdb->prepare(
+        "SELECT t3.id_proprio, t2.token_acces FROM " . $wpdb->prefix . "qtnc_loyers as t1 LEFT JOIN " . $wpdb->prefix . "qtnc_locataires as t2 on t1.id_locataire = t2.id LEFT JOIN " . $wpdb->prefix . "qtnc_appartements as t3 on t2.id_appartement = t3.id WHERE t1.uuid = %s",
         $loyerid
     ));
-    if($loyer_owner === null || $loyer_owner != get_current_user_id()){
-        $wpdb->close();
-        Header("Location: " . get_home_url() . "/");
-        exit;
+
+    // Le locataire peut consulter ou télécharger ses quittances avec son lien secret (pas les envoyer)
+    $acces_locataire = $acces_loyer !== null
+        && !empty($acces_loyer->token_acces)
+        && isset($_GET['acces']) && is_string($_GET['acces'])
+        && hash_equals($acces_loyer->token_acces, $_GET['acces'])
+        && ($way == 1 || $way == 2);
+
+    // Sinon, seul le propriétaire connecté du logement peut consulter ou envoyer la quittance
+    if(!$acces_locataire){
+        if(!is_user_logged_in()){
+            $wpdb->close();
+            Header("Location: " . wp_login_url((is_ssl() ? "https://" : "http://") . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"]));
+            exit;
+        }
+        if($acces_loyer === null || $acces_loyer->id_proprio != get_current_user_id()){
+            $wpdb->close();
+            Header("Location: " . get_home_url() . "/");
+            exit;
+        }
     }
 
     $loyer = $wpdb->get_row($wpdb->prepare("SELECT * FROM " . $wpdb->prefix . "qtnc_loyers WHERE uuid = %s", $loyerid));
@@ -493,6 +503,7 @@ require(dirname(__FILE__) . '/../../../../wp-load.php');
             $pdf->Output('F',$repStockage . $attchmentName);
             $subject = "Quittance de loyer $appartement->adresse " . substr($loyer->period_from,0,4) . "-" . substr($loyer->period_from,5,2);
             $corps_message = "Bonjour,\nCi-joint votre quittance de loyer pour la période : " . moisAnneeFr($loyer->period_from) . ".\nCordialement,\n" . $proprio->signature_email;
+            $corps_message .= "\n\n--\nRetrouvez toutes vos quittances de loyer à cette adresse (lien personnel, ne le partagez pas) :\n" . qtnc_url_espace_locataire(qtnc_token_locataire($locataire->id));
 
             $headers = array(
                 "From: " . $proprio->email_nom . " <" . $proprio->email . ">",
