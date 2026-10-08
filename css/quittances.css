@@ -1,0 +1,13 @@
+.clicable {
+  cursor: pointer;
+  color: blue;
+}
+
+.tableTitle {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 8px;
+  border-bottom: 2px solid #000;
+  width: 98%;
+  margin-bottom: 10px;
+}

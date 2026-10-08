@@ -1,0 +1,25 @@
+# Fichiers système macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Fichiers système Windows
+Thumbs.db
+desktop.ini
+
+# Éditeurs et IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs et fichiers temporaires
+*.log
+*.tmp
+*.bak
+
+# Secrets éventuels
+.env
+.env.*
