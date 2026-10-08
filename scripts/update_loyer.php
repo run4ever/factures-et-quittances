@@ -122,7 +122,7 @@ if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']
             break;
 
         case '2':
-            // Loyer reçu : enregistre le mois suivant le dernier loyer puis envoie la quittance
+            // Loyer reçu : enregistre le mois suivant le dernier loyer, puis envoie la quittance si demandé
             $periode = qtnc_prochaine_periode($_POST['locataire']);
             // La période affichée sur le bouton doit être celle attendue (évite un double enregistrement)
             if(!$periode['actif']){
@@ -159,7 +159,11 @@ if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']
                     '%d',
                 )
             );
-            $urlRedirection = plugins_url('quittances') . "/scripts/quitpdf.php?locataire=" . $locataire->uuid . "&loyer=" . $new_uuid . "&way=3";
+            if(!empty($_POST['envoi'])){
+                $urlRedirection = plugins_url('quittances') . "/scripts/quitpdf.php?locataire=" . $locataire->uuid . "&loyer=" . $new_uuid . "&way=3";
+            }else{
+                $urlRedirection = get_home_url() . "/quittances?loyer=ok";
+            }
             break;
     }
 

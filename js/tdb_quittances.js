@@ -66,3 +66,34 @@ function showInfos(sens) {
     });
   });
 })($);
+
+// Bouton "Loyer reçu" : confirmation adaptée selon que la quittance est envoyée ou non
+function confirmerLoyerRecu(form) {
+  let envoi = form.querySelector("input[name=envoi]");
+  let avecEnvoi = envoi && envoi.checked;
+  let message = "Enregistrer le loyer de " + form.dataset.mois + " (" + form.dataset.montant + " €) pour " + form.dataset.locataire;
+  message += avecEnvoi ? " et envoyer la quittance à " + form.dataset.email + " ?" : ", sans envoyer de quittance ?";
+  if (!confirm(message)) {
+    return false;
+  }
+  form.querySelector("button").disabled = true;
+  return true;
+}
+
+// Mémorise, par locataire, le choix "avec envoi de mail" dans ce navigateur
+jQuery(document).ready(function () {
+  jQuery(".envoi-quittance").each(function () {
+    let cle = "qtnc_envoi_" + this.dataset.locataire;
+    try {
+      let memo = localStorage.getItem(cle);
+      if (memo !== null && !this.disabled) {
+        this.checked = memo === "1";
+      }
+    } catch (e) {}
+    jQuery(this).change(function () {
+      try {
+        localStorage.setItem(cle, this.checked ? "1" : "0");
+      } catch (e) {}
+    });
+  });
+});

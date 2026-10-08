@@ -14,7 +14,7 @@ if(is_user_logged_in()){
 
    wp_enqueue_style('bootstrap-min_css', 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css', array(), false, 'all');
    wp_enqueue_script('jquery', 'https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js', '','',true );
-   wp_enqueue_script('tdb_quittances', plugins_url($pluginName) . '/js/tdb_quittances.js?1022', '','',true );
+   wp_enqueue_script('tdb_quittances', plugins_url($pluginName) . '/js/tdb_quittances.js?1023', '','',true );
    wp_enqueue_style('font-awesome-min_css', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css', array(),false, 'all');
 
    $script_upd_loyer = plugins_url($pluginName) . "/scripts/update_loyer.php";
@@ -39,6 +39,9 @@ if(is_user_logged_in()){
     }
     if(isset($_GET['envoi']) && $_GET['envoi'] == 'termine'){
         $html .= "<div class=\"col-12 col-md-8 alert alert-warning\" role=\"alert\">Le bail de ce locataire est terminé, rien n'a été ajouté ni envoyé.</div>";
+    }
+    if(isset($_GET['loyer']) && $_GET['loyer'] == 'ok'){
+        $html .= "<div class=\"col-12 col-md-8 alert alert-success\" role=\"alert\">Le loyer a bien été enregistré (sans envoi de quittance).</div>";
     }
     if(isset($_GET['envoi']) && $_GET['envoi'] == 'deja'){
         $html .= "<div class=\"col-12 col-md-8 alert alert-warning\" role=\"alert\">Ce loyer avait déjà été enregistré, rien n'a été ajouté ni envoyé.</div>";
@@ -303,21 +306,22 @@ if(count($locataires) > 0){
             $html .= " <span style=\"font-size:14px; color:#666;\">(fin de bail le " . date('d/m/Y', strtotime($locataire->date_to)) . ")</span>";
         }
 
-        // Bouton "Loyer reçu" : enregistre le prochain loyer et envoie la quittance
+        // Bouton "Loyer reçu" : enregistre le prochain loyer, avec ou sans envoi de la quittance
         $periode = qtnc_prochaine_periode($locataire->id);
         $mois = qtnc_mois_annee_fr($periode['from']);
         $montant = $locataire->loyer + $locataire->charges;
-        $confirmation = "Enregistrer le loyer de $mois ($montant €) et envoyer la quittance à $locataire->locataire ($locataire->email) ?";
         if($periode['actif']){
-            $html .= "<form method=POST action=$script_upd_loyer accept-charset=\"UTF-8\" style=\"display:inline; margin-left:15px;\" onsubmit=\"if(!confirm('" . esc_js($confirmation) . "')){return false;} this.querySelector('button').disabled=true;\">";
+            $html .= "<form method=POST action=$script_upd_loyer accept-charset=\"UTF-8\" style=\"display:inline; margin-left:15px;\" onsubmit=\"return confirmerLoyerRecu(this);\""
+                . " data-mois=\"" . esc_attr($mois) . "\" data-montant=\"" . esc_attr($montant) . "\" data-locataire=\"" . esc_attr($locataire->locataire) . "\" data-email=\"" . esc_attr($locataire->email) . "\">";
                 $html .= "<input type=\"hidden\" name=\"action\" value=\"2\">";
                 $html .= "<input type=\"hidden\" name=\"locataire\" value=\"$locataire->id\">";
                 $html .= "<input type=\"hidden\" name=\"period_from\" value=\"" . $periode['from'] . "\">";
-                if(empty($locataire->email)){
-                    $html .= "<button type=\"submit\" class=\"btn btn-sm btn-secondary\" disabled title=\"Aucun e-mail renseigné pour ce locataire\">Loyer reçu : $mois ($montant €)</button>";
-                }else{
-                    $html .= "<button type=\"submit\" class=\"btn btn-sm btn-success\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i> Loyer reçu : $mois ($montant €)</button>";
-                }
+                $html .= "<button type=\"submit\" class=\"btn btn-sm btn-success\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i> Loyer reçu : $mois ($montant €)</button>";
+                $html .= "<label style=\"margin-left:8px; font-size:14px;\"";
+                if(empty($locataire->email)){$html .= " title=\"Aucun e-mail renseigné pour ce locataire\"";}
+                $html .= "><input type=\"checkbox\" name=\"envoi\" value=\"1\" class=\"envoi-quittance\" data-locataire=\"$locataire->id\"";
+                $html .= empty($locataire->email) ? " disabled" : " checked";
+                $html .= "> avec envoi de mail</label>";
             $html .= "</form>";
         }
 
