@@ -33,7 +33,18 @@ function get_new_uuid() {
     return $uuid;
 }
 
-if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action'])){
+function client_appartient_a_l_utilisateur() {
+    global $wpdb;
+    // Création : le client est rattaché d'office à l'utilisateur connecté
+    if($_POST['action'] == '1'){return true;}
+    // Modification ou archivage : le client doit appartenir à l'utilisateur
+    return qtnc_appartient_a_l_utilisateur(
+        "SELECT id_sa FROM " . $wpdb->prefix . "qtnc_clients WHERE uuid = %s AND id = %d",
+        $_POST['uuid'], $_POST['id']
+    );
+}
+
+if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']) && client_appartient_a_l_utilisateur()){
     global $wpdb;
     $user = wp_get_current_user();
     $urlRedirection = get_home_url() . "/clients";

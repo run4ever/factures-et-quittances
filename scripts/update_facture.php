@@ -33,7 +33,23 @@ function get_new_uuid() {
     return $uuid;
 }
 
-if(isset($_POST['action']) && is_numeric($_POST['action'])){
+function facture_appartient_a_l_utilisateur() {
+    global $wpdb;
+    if($_POST['action'] == '1'){
+        // Création : le client facturé doit appartenir à l'utilisateur
+        return qtnc_appartient_a_l_utilisateur(
+            "SELECT id_sa FROM " . $wpdb->prefix . "qtnc_clients WHERE id = %d",
+            $_POST['patient']
+        );
+    }
+    // Modification ou suppression : la facture doit concerner un client de l'utilisateur
+    return qtnc_appartient_a_l_utilisateur(
+        "SELECT t1.id_sa FROM " . $wpdb->prefix . "qtnc_clients as t1 LEFT JOIN " . $wpdb->prefix . "qtnc_factures as t2 on t2.id_client = t1.id WHERE t2.uuid = %s AND t2.id = %d",
+        $_POST['uuid'], $_POST['id']
+    );
+}
+
+if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']) && facture_appartient_a_l_utilisateur()){
     global $wpdb;
 
     switch ($_POST['action']) {

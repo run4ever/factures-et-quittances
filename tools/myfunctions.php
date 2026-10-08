@@ -1,5 +1,14 @@
 <?php
 
+//----------------------------------------------------------
+// Contrôle d'appartenance pour les scripts d'enregistrement
+//----------------------------------------------------------
+// $requete renvoie l'id WordPress du propriétaire de l'élément visé
+function qtnc_appartient_a_l_utilisateur($requete, ...$params){
+    global $wpdb;
+    $owner = $wpdb->get_var($wpdb->prepare($requete, ...$params));
+    return $owner !== null && $owner == get_current_user_id();
+}
 
 /* Disable WordPress Admin Bar for all users except administrators */
 add_filter( 'show_admin_bar', 'restrict_admin_bar' );

@@ -33,7 +33,18 @@ function get_new_uuid() {
     return $uuid;
 }
 
-if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action'])){
+function appart_appartient_a_l_utilisateur() {
+    global $wpdb;
+    // Création : l'appartement est rattaché d'office à l'utilisateur connecté
+    if($_POST['action'] == '1'){return true;}
+    // Modification ou mise en vente : l'appartement doit appartenir à l'utilisateur
+    return qtnc_appartient_a_l_utilisateur(
+        "SELECT id_proprio FROM " . $wpdb->prefix . "qtnc_appartements WHERE uuid = %s AND id = %d",
+        $_POST['uuid'], $_POST['id']
+    );
+}
+
+if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']) && appart_appartient_a_l_utilisateur()){
     global $wpdb;
     $user = wp_get_current_user();
 

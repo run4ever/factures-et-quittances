@@ -33,7 +33,27 @@ function get_new_uuid() {
     return $uuid;
 }
 
-if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action'])){
+function locataire_appartient_a_l_utilisateur() {
+    global $wpdb;
+    // Modification ou départ : le locataire doit occuper un logement de l'utilisateur
+    if($_POST['action'] != '1'){
+        $ok = qtnc_appartient_a_l_utilisateur(
+            "SELECT t2.id_proprio FROM " . $wpdb->prefix . "qtnc_locataires as t1 LEFT JOIN " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id WHERE t1.uuid = %s AND t1.id = %d",
+            $_POST['uuid'], $_POST['id']
+        );
+        if(!$ok){return false;}
+    }
+    // Création ou modification : l'appartement choisi doit appartenir à l'utilisateur
+    if($_POST['action'] == '0' || $_POST['action'] == '1'){
+        return qtnc_appartient_a_l_utilisateur(
+            "SELECT id_proprio FROM " . $wpdb->prefix . "qtnc_appartements WHERE id = %d",
+            $_POST['appartement']
+        );
+    }
+    return true;
+}
+
+if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']) && locataire_appartient_a_l_utilisateur()){
     global $wpdb;
     $user = wp_get_current_user();
 
