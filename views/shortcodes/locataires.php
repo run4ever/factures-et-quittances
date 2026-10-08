@@ -96,7 +96,7 @@ if(is_user_logged_in()){
 
     $html .= "<br /><br />";
 
-    $sql = "select t1.*, t2.adresse, t2.cp, t2.ville from " . $wpdb->prefix . "qtnc_locataires as t1 left join " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id where t1.id_appartement in(SELECT id FROM " . $wpdb->prefix . "qtnc_appartements as t3 WHERE t3.id_proprio = $user->id AND t3.date_vente is NULL) and t1.date_to is NULL order by t1.date_from asc";
+    $sql = "select t1.*, t2.adresse, t2.cp, t2.ville from " . $wpdb->prefix . "qtnc_locataires as t1 left join " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id where t1.id_appartement in(SELECT id FROM " . $wpdb->prefix . "qtnc_appartements as t3 WHERE t3.id_proprio = $user->id AND t3.date_vente is NULL) and (t1.date_to is NULL or t1.date_to >= CURDATE()) order by t1.date_from asc";
     $locataires = $wpdb->get_results($sql);
 
     foreach($locataires as $locataire){
@@ -113,6 +113,9 @@ if(is_user_logged_in()){
             $html .= "</div>";
             $html .= "<div class=\"col-12 col-md-3\">";
                 $html .= "<span style=\"margin-left:5px;\">Depuis le " . date('d/m/Y', strtotime($locataire->date_from)) ."</span>";
+                if(!empty($locataire->date_to)){
+                    $html .= "<span style=\"margin-left:5px;\"> - fin de bail le " . date('d/m/Y', strtotime($locataire->date_to)) ."</span>";
+                }
             $html .= "</div>";
         $html .= "</div>";
 
@@ -177,13 +180,13 @@ if(is_user_logged_in()){
                     $html .= "<input type=\"hidden\" name=\"id\" value=\"$locataire->id\">";
                     $html .= "<div class=\"row mt-2\">";
                         $html .= "<div class=\"col-12 col-md-3\">";
-                            $html .= "<label for=\"date_depart\" class=\"myFormLabels\">Parti le...</label>
-                                <input name=\"date_depart\" id=\"date_depart\" class=\"form-control\" type=\"date\">
+                            $html .= "<label for=\"date_depart\" class=\"myFormLabels\">Fin de bail le...</label>
+                                <input name=\"date_depart\" id=\"date_depart\" class=\"form-control\" type=\"date\" value=\"$locataire->date_to\" required>
                                 <span name=\"endDateSelected_$locataire->id\" id=\"endDateSelected_$locataire->id\"></span>";
                             $html .= "</div>";
 
                         $html .= "<div class=\"col-12 col-md-3\">";
-                            $html .= "<button type=\"submit\" class=\"btn btn-danger\" style=\"margin-top: 25px; width:100%;\">Enregistrer le départ</button>";
+                            $html .= "<button type=\"submit\" class=\"btn btn-danger\" style=\"margin-top: 25px; width:100%;\">Enregistrer la fin de bail</button>";
                         $html .= "</div>";
                     $html .= "</div>";
                 $html .= "</form>";

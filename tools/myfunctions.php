@@ -20,16 +20,24 @@ function qtnc_mois_annee_fr($date){
 }
 
 // Période du prochain loyer d'un locataire : du lendemain du dernier loyer saisi
-// (ou du 1er du mois en cours s'il n'y en a aucun) jusqu'à la fin de ce mois
+// (ou du 1er du mois en cours s'il n'y en a aucun) jusqu'à la fin de ce mois,
+// ou jusqu'à la fin de bail si elle tombe avant.
+// 'actif' est faux si le bail est terminé avant le début de cette période.
 function qtnc_prochaine_periode($id_locataire){
     global $wpdb;
     $dernier = $wpdb->get_var($wpdb->prepare(
         "SELECT MAX(period_to) FROM " . $wpdb->prefix . "qtnc_loyers WHERE id_locataire = %d",
         $id_locataire
     ));
+    $fin_bail = $wpdb->get_var($wpdb->prepare(
+        "SELECT date_to FROM " . $wpdb->prefix . "qtnc_locataires WHERE id = %d",
+        $id_locataire
+    ));
     $debut = $dernier ? date('Y-m-d', strtotime($dernier . ' + 1 day')) : date('Y-m') . '-01';
     $fin = date('Y-m-t', strtotime($debut));
-    return array('from' => $debut, 'to' => $fin);
+    if($fin_bail && $fin_bail < $fin){$fin = $fin_bail;}
+    $actif = !$fin_bail || $debut <= $fin_bail;
+    return array('from' => $debut, 'to' => $fin, 'actif' => $actif);
 }
 
 //----------------------------------------------------------

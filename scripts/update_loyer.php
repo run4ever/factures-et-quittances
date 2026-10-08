@@ -125,6 +125,10 @@ if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']
             // Loyer reçu : enregistre le mois suivant le dernier loyer puis envoie la quittance
             $periode = qtnc_prochaine_periode($_POST['locataire']);
             // La période affichée sur le bouton doit être celle attendue (évite un double enregistrement)
+            if(!$periode['actif']){
+                $urlRedirection = get_home_url() . "/quittances?envoi=termine";
+                break;
+            }
             if($periode['from'] != $_POST['period_from']){
                 $urlRedirection = get_home_url() . "/quittances?envoi=deja";
                 break;

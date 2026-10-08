@@ -22,7 +22,7 @@ if(is_user_logged_in()){
    $script_upd_locataire = plugins_url($pluginName) . "/scripts/update_locataire.php";
 
    $user = wp_get_current_user();
-   $sql = "SELECT t1.*, t2.loyer, t2.charges FROM " . $wpdb->prefix . "qtnc_locataires as t1 left join " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id WHERE t1.date_to is NULL AND t2.id_proprio = " . $user->id;
+   $sql = "SELECT t1.*, t2.loyer, t2.charges FROM " . $wpdb->prefix . "qtnc_locataires as t1 left join " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id WHERE t2.id_proprio = " . $user->id;
 
   $locataires = $wpdb->get_results($sql);
   $proprio = $wpdb->get_row("SELECT * FROM " . $wpdb->prefix . "qtnc_proprietaires WHERE user_id = $user->id");  
@@ -36,6 +36,9 @@ if(is_user_logged_in()){
     }
     if(isset($_GET['lien']) && $_GET['lien'] == 'nouveau'){
         $html .= "<div class=\"col-12 col-md-8 alert alert-success\" role=\"alert\">Nouveau lien créé : l'ancien lien de l'espace locataire ne fonctionne plus. Le nouveau sera envoyé avec la prochaine quittance.</div>";
+    }
+    if(isset($_GET['envoi']) && $_GET['envoi'] == 'termine'){
+        $html .= "<div class=\"col-12 col-md-8 alert alert-warning\" role=\"alert\">Le bail de ce locataire est terminé, rien n'a été ajouté ni envoyé.</div>";
     }
     if(isset($_GET['envoi']) && $_GET['envoi'] == 'deja'){
         $html .= "<div class=\"col-12 col-md-8 alert alert-warning\" role=\"alert\">Ce loyer avait déjà été enregistré, rien n'a été ajouté ni envoyé.</div>";
@@ -229,7 +232,9 @@ if(count($locataires) > 0){
                     $html .= "<select name=\"locataire\" id=\"select_locataire\" class=\"form-select\" style=\"min-height: 33px;\" required>";
                     $html .= "<option value=\"\">Choisir un locataire...</option>";
                             foreach ($locataires as $locataire) {
-                                $html .= "<option value=\"$locataire->id\">$locataire->locataire</option>";
+                                $html .= "<option value=\"$locataire->id\">$locataire->locataire";
+                                if(!empty($locataire->date_to) && $locataire->date_to < date('Y-m-d')){$html .= " (bail terminé)";}
+                                $html .= "</option>";
                             }
                     $html .= "</select>";
                 $html .= "</div>";
@@ -294,22 +299,27 @@ if(count($locataires) > 0){
         $adresse = $wpdb->get_var("select adresse from " . $wpdb->prefix . "qtnc_appartements where id = ".$locataire->id_appartement);
 
         $html .= "<br /><strong>$locataire->locataire, $adresse</strong>";
+        if(!empty($locataire->date_to)){
+            $html .= " <span style=\"font-size:14px; color:#666;\">(fin de bail le " . date('d/m/Y', strtotime($locataire->date_to)) . ")</span>";
+        }
 
         // Bouton "Loyer reçu" : enregistre le prochain loyer et envoie la quittance
         $periode = qtnc_prochaine_periode($locataire->id);
         $mois = qtnc_mois_annee_fr($periode['from']);
         $montant = $locataire->loyer + $locataire->charges;
         $confirmation = "Enregistrer le loyer de $mois ($montant €) et envoyer la quittance à $locataire->locataire ($locataire->email) ?";
-        $html .= "<form method=POST action=$script_upd_loyer accept-charset=\"UTF-8\" style=\"display:inline; margin-left:15px;\" onsubmit=\"if(!confirm('" . esc_js($confirmation) . "')){return false;} this.querySelector('button').disabled=true;\">";
-            $html .= "<input type=\"hidden\" name=\"action\" value=\"2\">";
-            $html .= "<input type=\"hidden\" name=\"locataire\" value=\"$locataire->id\">";
-            $html .= "<input type=\"hidden\" name=\"period_from\" value=\"" . $periode['from'] . "\">";
-            if(empty($locataire->email)){
-                $html .= "<button type=\"submit\" class=\"btn btn-sm btn-secondary\" disabled title=\"Aucun e-mail renseigné pour ce locataire\">Loyer reçu : $mois ($montant €)</button>";
-            }else{
-                $html .= "<button type=\"submit\" class=\"btn btn-sm btn-success\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i> Loyer reçu : $mois ($montant €)</button>";
-            }
-        $html .= "</form>";
+        if($periode['actif']){
+            $html .= "<form method=POST action=$script_upd_loyer accept-charset=\"UTF-8\" style=\"display:inline; margin-left:15px;\" onsubmit=\"if(!confirm('" . esc_js($confirmation) . "')){return false;} this.querySelector('button').disabled=true;\">";
+                $html .= "<input type=\"hidden\" name=\"action\" value=\"2\">";
+                $html .= "<input type=\"hidden\" name=\"locataire\" value=\"$locataire->id\">";
+                $html .= "<input type=\"hidden\" name=\"period_from\" value=\"" . $periode['from'] . "\">";
+                if(empty($locataire->email)){
+                    $html .= "<button type=\"submit\" class=\"btn btn-sm btn-secondary\" disabled title=\"Aucun e-mail renseigné pour ce locataire\">Loyer reçu : $mois ($montant €)</button>";
+                }else{
+                    $html .= "<button type=\"submit\" class=\"btn btn-sm btn-success\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i> Loyer reçu : $mois ($montant €)</button>";
+                }
+            $html .= "</form>";
+        }
 
         // Espace locataire : lien secret et renouvellement du lien
         $url_espace = qtnc_url_espace_locataire(qtnc_token_locataire($locataire->id));
