@@ -33,7 +33,25 @@ function get_new_uuid() {
     return $uuid;
 }
 
-if(isset($_POST['action']) && is_numeric($_POST['action'])){
+function loyer_appartient_a_l_utilisateur() {
+    global $wpdb;
+    if($_POST['action'] == '1'){
+        // Création : le locataire doit occuper un logement de l'utilisateur
+        $owner = $wpdb->get_var($wpdb->prepare(
+            "SELECT t2.id_proprio FROM " . $wpdb->prefix . "qtnc_locataires as t1 LEFT JOIN " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id WHERE t1.id = %d",
+            $_POST['locataire']
+        ));
+    }else{
+        // Modification ou suppression : le loyer doit concerner un logement de l'utilisateur
+        $owner = $wpdb->get_var($wpdb->prepare(
+            "SELECT t3.id_proprio FROM " . $wpdb->prefix . "qtnc_loyers as t1 LEFT JOIN " . $wpdb->prefix . "qtnc_locataires as t2 on t1.id_locataire = t2.id LEFT JOIN " . $wpdb->prefix . "qtnc_appartements as t3 on t2.id_appartement = t3.id WHERE t1.uuid = %s AND t1.id = %d",
+            $_POST['uuid'], $_POST['id']
+        ));
+    }
+    return $owner !== null && $owner == get_current_user_id();
+}
+
+if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']) && loyer_appartient_a_l_utilisateur()){
     global $wpdb;
 
     switch ($_POST['action']) {
