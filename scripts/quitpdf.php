@@ -323,6 +323,22 @@ require(dirname(__FILE__) . '/../../../../wp-load.php');
     if(isset($_GET['way'])){
         $way = $_GET['way'];
     }
+    // Seul le propriétaire connecté du logement peut consulter ou envoyer la quittance
+    if(!is_user_logged_in()){
+        $wpdb->close();
+        Header("Location: " . wp_login_url((is_ssl() ? "https://" : "http://") . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"]));
+        exit;
+    }
+    $loyer_owner = $wpdb->get_var($wpdb->prepare(
+        "SELECT t3.id_proprio FROM " . $wpdb->prefix . "qtnc_loyers as t1 LEFT JOIN " . $wpdb->prefix . "qtnc_locataires as t2 on t1.id_locataire = t2.id LEFT JOIN " . $wpdb->prefix . "qtnc_appartements as t3 on t2.id_appartement = t3.id WHERE t1.uuid = %s",
+        $loyerid
+    ));
+    if($loyer_owner === null || $loyer_owner != get_current_user_id()){
+        $wpdb->close();
+        Header("Location: " . get_home_url() . "/");
+        exit;
+    }
+
     $loyer = $wpdb->get_row($wpdb->prepare("SELECT * FROM " . $wpdb->prefix . "qtnc_loyers WHERE uuid = %s", $loyerid));
     $pdf = new PDF();
             $pdf->SetMargins(15,20);
