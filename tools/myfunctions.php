@@ -10,6 +10,28 @@ function qtnc_appartient_a_l_utilisateur($requete, ...$params){
     return $owner !== null && $owner == get_current_user_id();
 }
 
+//----------------------------------------------------------
+// Loyers
+//----------------------------------------------------------
+// "2026-10-01" => "octobre 2026"
+function qtnc_mois_annee_fr($date){
+    $mois = array('janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre');
+    return $mois[intval(substr($date, 5, 2)) - 1] . " " . substr($date, 0, 4);
+}
+
+// Période du prochain loyer d'un locataire : du lendemain du dernier loyer saisi
+// (ou du 1er du mois en cours s'il n'y en a aucun) jusqu'à la fin de ce mois
+function qtnc_prochaine_periode($id_locataire){
+    global $wpdb;
+    $dernier = $wpdb->get_var($wpdb->prepare(
+        "SELECT MAX(period_to) FROM " . $wpdb->prefix . "qtnc_loyers WHERE id_locataire = %d",
+        $id_locataire
+    ));
+    $debut = $dernier ? date('Y-m-d', strtotime($dernier . ' + 1 day')) : date('Y-m') . '-01';
+    $fin = date('Y-m-t', strtotime($debut));
+    return array('from' => $debut, 'to' => $fin);
+}
+
 /* Disable WordPress Admin Bar for all users except administrators */
 add_filter( 'show_admin_bar', 'restrict_admin_bar' );
 function restrict_admin_bar( $show ) {

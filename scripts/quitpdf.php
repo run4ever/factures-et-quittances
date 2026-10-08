@@ -522,7 +522,7 @@ require(dirname(__FILE__) . '/../../../../wp-load.php');
                     "Échec de l'envoi"
                 );
             }
-            $urlRedirection = get_home_url() . "/";
+            $urlRedirection = get_home_url() . "/quittances?envoi=ok";
             Header("Location: $urlRedirection");
             break;
     }

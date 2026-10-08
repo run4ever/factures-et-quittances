@@ -30,6 +30,13 @@ if(is_user_logged_in()){
     $html .= display_menu();
     $html .= "<h2>Gestion locative</h2>";
 
+    if(isset($_GET['envoi']) && $_GET['envoi'] == 'ok'){
+        $html .= "<div class=\"col-12 col-md-8 alert alert-success\" role=\"alert\">La quittance a bien été envoyée au locataire.</div>";
+    }
+    if(isset($_GET['envoi']) && $_GET['envoi'] == 'deja'){
+        $html .= "<div class=\"col-12 col-md-8 alert alert-warning\" role=\"alert\">Ce loyer avait déjà été enregistré, rien n'a été ajouté ni envoyé.</div>";
+    }
+
     $html .= "<div class=\"row tableTitle mt30\">";
         $html .= "<div class=\"col-10\">";
               $html .= "Infos propriétaire";
@@ -283,6 +290,22 @@ if(count($locataires) > 0){
         $adresse = $wpdb->get_var("select adresse from " . $wpdb->prefix . "qtnc_appartements where id = ".$locataire->id_appartement);
 
         $html .= "<br /><strong>$locataire->locataire, $adresse</strong>";
+
+        // Bouton "Loyer reçu" : enregistre le prochain loyer et envoie la quittance
+        $periode = qtnc_prochaine_periode($locataire->id);
+        $mois = qtnc_mois_annee_fr($periode['from']);
+        $montant = $locataire->loyer + $locataire->charges;
+        $confirmation = "Enregistrer le loyer de $mois ($montant €) et envoyer la quittance à $locataire->locataire ($locataire->email) ?";
+        $html .= "<form method=POST action=$script_upd_loyer accept-charset=\"UTF-8\" style=\"display:inline; margin-left:15px;\" onsubmit=\"if(!confirm('" . esc_js($confirmation) . "')){return false;} this.querySelector('button').disabled=true;\">";
+            $html .= "<input type=\"hidden\" name=\"action\" value=\"2\">";
+            $html .= "<input type=\"hidden\" name=\"locataire\" value=\"$locataire->id\">";
+            $html .= "<input type=\"hidden\" name=\"period_from\" value=\"" . $periode['from'] . "\">";
+            if(empty($locataire->email)){
+                $html .= "<button type=\"submit\" class=\"btn btn-sm btn-secondary\" disabled title=\"Aucun e-mail renseigné pour ce locataire\">Loyer reçu : $mois ($montant €)</button>";
+            }else{
+                $html .= "<button type=\"submit\" class=\"btn btn-sm btn-success\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i> Loyer reçu : $mois ($montant €)</button>";
+            }
+        $html .= "</form>";
 
         $loyersPayes = $wpdb->get_results("select * from " . $wpdb->prefix . "qtnc_loyers where id_locataire = " . $locataire->id . " order by period_from desc");
 

@@ -35,7 +35,7 @@ function get_new_uuid() {
 
 function loyer_appartient_a_l_utilisateur() {
     global $wpdb;
-    if($_POST['action'] == '1'){
+    if($_POST['action'] == '1' || $_POST['action'] == '2'){
         // Création : le locataire doit occuper un logement de l'utilisateur
         return qtnc_appartient_a_l_utilisateur(
             "SELECT t2.id_proprio FROM " . $wpdb->prefix . "qtnc_locataires as t1 LEFT JOIN " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id WHERE t1.id = %d",
@@ -118,12 +118,51 @@ if(is_user_logged_in() && isset($_POST['action']) && is_numeric($_POST['action']
                     '%d',
                 )
             );
-            
+
+            break;
+
+        case '2':
+            // Loyer reçu : enregistre le mois suivant le dernier loyer puis envoie la quittance
+            $periode = qtnc_prochaine_periode($_POST['locataire']);
+            // La période affichée sur le bouton doit être celle attendue (évite un double enregistrement)
+            if($periode['from'] != $_POST['period_from']){
+                $urlRedirection = get_home_url() . "/quittances?envoi=deja";
+                break;
+            }
+            $locataire = $wpdb->get_row($wpdb->prepare(
+                "SELECT t1.uuid, t2.loyer, t2.charges FROM " . $wpdb->prefix . "qtnc_locataires as t1 LEFT JOIN " . $wpdb->prefix . "qtnc_appartements as t2 on t1.id_appartement = t2.id WHERE t1.id = %d",
+                $_POST['locataire']
+            ));
+            $new_uuid = get_new_uuid();
+            $wpdb->insert(
+                $wpdb->prefix . "qtnc_loyers",
+                array(
+                    'id_locataire' => $_POST['locataire'],
+                    'uuid' => $new_uuid,
+                    'period_from' => $periode['from'],
+                    'period_to' => $periode['to'],
+                    'loyer_nu' => $locataire->loyer,
+                    'charges' => $locataire->charges,
+                    'payed' => 1,
+                ),
+                array(
+                    '%d',
+                    '%s',
+                    '%s',
+                    '%s',
+                    '%f',
+                    '%f',
+                    '%d',
+                )
+            );
+            $urlRedirection = plugins_url('quittances') . "/scripts/quitpdf.php?locataire=" . $locataire->uuid . "&loyer=" . $new_uuid . "&way=3";
             break;
     }
 
     $wpdb->close();
-    $urlRedirection = get_home_url() . "/quittances";
+    if(!isset($urlRedirection)){
+        $urlRedirection = get_home_url() . "/quittances";
+    }
     Header("Location: $urlRedirection");
 }
 
